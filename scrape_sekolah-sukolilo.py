@@ -1,14 +1,18 @@
-""" ==============================================================
+"""
+==============================================================
 TSP MBG - Scraping Sekolah Kecamatan Sukolilo
 Sumber: OpenStreetMap via Overpass API
+--------------------------------------------------------------
+Versi: TSP Murni (Struktur Folder Flat)
 ==============================================================
 """
 
 import requests
 import pandas as pd
 import time
+import re
 
-# Multiple server mirror — kalau satu down, coba yang lain
+# Multiple server mirror (jika salah satu overload, coba yang lain)
 OVERPASS_MIRRORS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
@@ -43,17 +47,23 @@ def detect_jenjang(nama, tags):
     else:
         return "TIDAK_DIKENAL"
 
+def is_negeri(nama):
+    """Filter ketat menggunakan Regex untuk mendeteksi sekolah negeri di Indonesia."""
+    nama_up = nama.upper()
+    
+    if re.search(r'\bNEGERI\b', nama_up): return True
+    if re.search(r'\b(SDN|SMPN|SMAN|SMKN|MIN|MTSN|MAN)\b', nama_up): return True
+    if re.search(r'\b(SDN|SMPN|SMAN|SMKN|MIN|MTSN|MAN)\d+', nama_up): return True
+    return False
+
 def fetch_with_mirrors(query):
-    """Coba semua mirror sampai ada yang berhasil."""
     for mirror in OVERPASS_MIRRORS:
-        for attempt in range(2):  # 2x percobaan per mirror
+        for attempt in range(2):
             try:
                 print(f"  Mencoba: {mirror.split('/')[2]} (attempt {attempt+1})...")
                 resp = requests.post(
-                    mirror,
-                    data={"data": query},
-                    timeout=60,
-                    headers={"User-Agent": "TSP-MBG-Sukolilo/1.2"}
+                    mirror, data={"data": query}, timeout=60,
+                    headers={"User-Agent": "TSP-MBG-Sukolilo/1.6"}
                 )
                 resp.raise_for_status()
                 elements = resp.json().get("elements", [])
@@ -84,28 +94,23 @@ def parse_elements(elements):
             center = el.get("center", {})
             lat, lng = center.get("lat"), center.get("lon")
 
-        if not lat or not lng:
-            continue
+        if not lat or not lng: continue
 
-        nama = (
-            tags.get("name") or
-            tags.get("name:id") or
-            tags.get("official_name") or ""
-        )
-        if not nama:
-            continue
+        nama = tags.get("name") or tags.get("name:id") or tags.get("official_name") or ""
+        if not nama: continue
 
         jenjang = detect_jenjang(nama, tags)
-        if jenjang not in ["SD", "SMP", "SMA/SMK"]:
-            continue
+        
+        # Whitelist Jenjang & Status Negeri
+        if jenjang not in ["SD", "SMP", "SMA/SMK"]: continue
+        if not is_negeri(nama): continue
 
         schools.append({
             "osm_id":       el.get("id"),
             "nama_sekolah": nama.strip().title(),
             "jenjang":      jenjang,
             "alamat":       tags.get("addr:full", tags.get("addr:street", "")),
-            "kelurahan":    tags.get("addr:suburb", tags.get("addr:village",
-                            tags.get("addr:quarter", ""))),
+            "kelurahan":    tags.get("addr:suburb", tags.get("addr:village", tags.get("addr:quarter", ""))),
             "kecamatan":    "Sukolilo",
             "kota":         "Surabaya",
             "lat":          round(lat, 7),
@@ -116,22 +121,19 @@ def parse_elements(elements):
 if __name__ == "__main__":
     print("=" * 60)
     print("TSP MBG - Scraping Sekolah Kecamatan Sukolilo")
-    print("Mode: Multi-mirror + retry")
+    print("Mode: TSP Murni (Struktur Folder Flat)")
     print("=" * 60)
 
     print("\nMengambil data dari OSM...")
     elements = fetch_with_mirrors(QUERY_BBOX)
 
     if not elements:
-        print("\n❌ Semua mirror gagal. Kemungkinan:")
-        print("   1. Koneksi internet bermasalah")
-        print("   2. Semua server Overpass sedang overload")
-        print("   Coba lagi beberapa menit kemudian.")
+        print("\n❌ Semua mirror gagal.")
         exit(1)
 
     schools = parse_elements(elements)
     if not schools:
-        print("❌ Tidak ada sekolah SD/SMP/SMA ditemukan.")
+        print("❌ Tidak ada sekolah Negeri (SD/SMP/SMA) ditemukan.")
         exit(1)
 
     df = pd.DataFrame(schools)
@@ -141,18 +143,16 @@ if __name__ == "__main__":
     df = df.sort_values(["jenjang", "nama_sekolah"]).reset_index(drop=True)
     df.index += 1
 
-    df.to_csv("sekolah_sukolilo_.csv", index_label="no", encoding="utf-8-sig")
+    # ─── PENYIMPANAN FILE ─────────────────────────────────────────────────
+    file_path = "sekolah_sukolilo.csv"
+    df.to_csv(file_path, index_label="no", encoding="utf-8-sig")
+    # ──────────────────────────────────────────────────────────────────────
 
     print(f"\n{'='*60}")
-    print(f"✅ Total sekolah (SD/SMP/SMA): {len(df)}")
-    print(f"   Duplikat dihapus: {before - len(df)}")
-    print(f"\nRekap per jenjang:")
-    for jenjang, count in df["jenjang"].value_counts().items():
-        print(f"  {jenjang:10s}: {count} sekolah")
-
+    print(f"✅ Total Sekolah Negeri: {len(df)}")
     print(f"\nDaftar lengkap:")
     print("-" * 80)
     for _, row in df.iterrows():
-        print(f"  [{row.name:2d}] {row['jenjang']:8s} | {row['nama_sekolah'][:40]:40s} | {row['kelurahan']}")
+        print(f"  [{row.name:2d}] {row['jenjang']:8s} | {row['nama_sekolah'][:40]:40s}")
 
-    print(f"\n📄 Disimpan: sekolah_sukolilo.csv")
+    print(f"\n📄 Data berhasil disimpan di: {file_path}")

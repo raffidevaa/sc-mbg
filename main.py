@@ -6,6 +6,10 @@ import random
 import osmnx as ox
 import networkx as nx
 import matplotlib.pyplot as plt
+import folium
+from folium.plugins import MiniMap
+
+random.seed(42)  # seed agar hasil GA reproducible (sama di setiap run)
 
 # =========================
 # 2. LOAD DATA
@@ -225,15 +229,14 @@ print("Best Distance:", fitness(best_route))
 #     print("Error: No valid route segments found to plot.")
 
 # =========================
-# 13. PLOT ROUTE (OSM) - ROBUST VERSION
+# 13. PLOT ROUTE — FOLIUM INTERACTIVE MAP
 # =========================
 all_routes = []
 
 print("Preparing route segments for visualization...")
 for i in range(len(best_route)):
     start_node = nodes[best_route[i]]
-    end_node = nodes[best_route[(i + 1) % len(best_route)]]
-    
+    end_node   = nodes[best_route[(i + 1) % len(best_route)]]
     try:
         path = nx.shortest_path(G, start_node, end_node, weight="length")
         all_routes.append(path)
@@ -241,18 +244,109 @@ for i in range(len(best_route)):
         print(f"Warning: No path between {start_node} and {end_node}. Segment hidden.")
 
 if all_routes:
-    # Menggunakan plot_graph_routes untuk menggambar kumpulan path yang terpisah
-    fig, ax = ox.plot_graph_routes(G, all_routes, route_colors='r', route_linewidth=3, node_size=0)
-    
-    # Tambahkan marker untuk Depot (Point 0)
+    # ============================================
+    # 13. FOLIUM INTERACTIVE MAP
+    # ============================================
+
+    # Helper: ambil nama lokasi dari dataframe
+    def get_label(idx):
+        row = points.iloc[idx]
+        name = row.get('nama_sekolah', None)
+        if pd.isna(name) or name is None:
+            name = row.get('nama', f'Lokasi {idx}')
+        jenjang = row.get('jenjang', '')
+        alamat  = row.get('alamat', '-')
+        if pd.isna(jenjang): jenjang = 'Depot'
+        if pd.isna(alamat):  alamat  = '-'
+        return str(name), str(jenjang), str(alamat)
+
+    # Pusat peta
+    center_lat = points["lat"].mean()
+    center_lng = points["lng"].mean()
+
+    # Buat peta Folium dengan tile CartoDB Voyager
+    m = folium.Map(
+        location=[center_lat, center_lng],
+        zoom_start=13,
+        tiles='CartoDB Voyager'
+    )
+
+    # --- Gambar segmen rute ---
+    for path in all_routes:
+        coords = [(G.nodes[n]['y'], G.nodes[n]['x']) for n in path]  # (lat, lng)
+        folium.PolyLine(
+            coords,
+            color='#E63946',
+            weight=4,
+            opacity=0.85,
+            tooltip='Rute Optimal GA'
+        ).add_to(m)
+
+    # --- Marker sekolah ---
+    for order, idx in enumerate(best_route[1:], start=1):
+        node = nodes[idx]
+        lat  = G.nodes[node]['y']
+        lng  = G.nodes[node]['x']
+        name, jenjang, alamat = get_label(idx)
+
+        popup_html = f"""
+        <div style="font-family:Arial;font-size:13px;min-width:200px">
+            <b style="color:#1D3557">#{order} — {name}</b><br>
+            <span style="color:#555">Jenjang:</span> {jenjang}<br>
+            <span style="color:#555">Alamat:</span> {alamat}
+        </div>"""
+
+        folium.CircleMarker(
+            location=[lat, lng],
+            radius=7,
+            color='white',
+            weight=1.5,
+            fill=True,
+            fill_color='#1D6FA4',
+            fill_opacity=0.9,
+            tooltip=f'#{order} {name}',
+            popup=folium.Popup(popup_html, max_width=260)
+        ).add_to(m)
+
+    # --- Marker depot ---
     depot_node = nodes[best_route[0]]
-    depot_lat = G.nodes[depot_node]['y']
-    depot_lng = G.nodes[depot_node]['x']
-    ax.scatter(depot_lng, depot_lat, c='yellow', s=100, label='Depot', edgecolors='black', zorder=5)
-    
-    plt.legend()
-    plt.savefig("rute_mbg.png", dpi=300)
-    plt.show()
+    depot_lat  = G.nodes[depot_node]['y']
+    depot_lng  = G.nodes[depot_node]['x']
+    depot_name, _, depot_alamat = get_label(best_route[0])
+
+    depot_popup = f"""
+    <div style="font-family:Arial;font-size:13px;min-width:200px">
+        <b style="color:#E63946">⭐ DEPOT — {depot_name}</b><br>
+        <span style="color:#555">Alamat:</span> {depot_alamat}
+    </div>"""
+
+    folium.Marker(
+        location=[depot_lat, depot_lng],
+        tooltip='⭐ Depot SPPG (Titik Awal/Akhir)',
+        popup=folium.Popup(depot_popup, max_width=260),
+        icon=folium.Icon(color='orange', icon='star', prefix='fa')
+    ).add_to(m)
+
+    # --- MiniMap di pojok ---
+    MiniMap(toggle_display=True).add_to(m)
+
+    # --- Title overlay ---
+    title_html = f'''
+    <div style="position:fixed;top:12px;left:55px;z-index:9999;
+                background:rgba(255,255,255,0.92);padding:10px 16px;
+                border-radius:8px;border:1px solid #ccc;
+                font-family:Arial;font-size:14px;color:#1D3557;">
+        <b>🗺️ Rute Optimal MBG Sukolilo</b><br>
+        <span style="font-size:12px;color:#555">
+        Best Distance: <b>{fitness(best_route)/1000:.2f} km</b> &nbsp;|&nbsp;
+        {len(best_route)-1} Sekolah &nbsp;|&nbsp; 50 Generasi
+        </span>
+    </div>'''
+    m.get_root().html.add_child(folium.Element(title_html))
+
+    # Simpan
+    m.save("rute_mbg.html")
+    print("Peta interaktif disimpan: rute_mbg.html")
 
 # =========================
 # 14. PLOT KONVERGENSI (OPSIONAL BAGUS)

@@ -1,9 +1,9 @@
 """
 ==============================================================
-TSP MBG - Scraping Sekolah Kecamatan Sukolilo
+TSP MBG - Scraping Sekolah Kecamatan Sukolilo (Expanded Radius)
 Sumber: OpenStreetMap via Overpass API
 --------------------------------------------------------------
-Versi: TSP Murni (Struktur Folder Flat)
+Versi: TSP Murni (Struktur Folder Flat) + Bounding Box Diperlebar
 ==============================================================
 """
 
@@ -19,13 +19,14 @@ OVERPASS_MIRRORS = [
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
 
+# Radius diperlebar agar menjangkau perbatasan untuk memenuhi target >= 30 sekolah
 QUERY_BBOX = """
 [out:json][timeout:60];
 (
-  node["amenity"="school"](-7.318,112.765,-7.252,112.825);
-  way["amenity"="school"](-7.318,112.765,-7.252,112.825);
-  node["amenity"="college"](-7.318,112.765,-7.252,112.825);
-  way["amenity"="college"](-7.318,112.765,-7.252,112.825);
+  node["amenity"="school"](-7.320,112.762,-7.250,112.828);
+  way["amenity"="school"](-7.320,112.762,-7.250,112.828);
+  node["amenity"="college"](-7.320,112.762,-7.250,112.828);
+  way["amenity"="college"](-7.320,112.762,-7.250,112.828);
 );
 out center tags;
 """
@@ -63,7 +64,7 @@ def fetch_with_mirrors(query):
                 print(f"  Mencoba: {mirror.split('/')[2]} (attempt {attempt+1})...")
                 resp = requests.post(
                     mirror, data={"data": query}, timeout=60,
-                    headers={"User-Agent": "TSP-MBG-Sukolilo/1.6"}
+                    headers={"User-Agent": "TSP-MBG-Sukolilo/1.7"}
                 )
                 resp.raise_for_status()
                 elements = resp.json().get("elements", [])
@@ -111,7 +112,7 @@ def parse_elements(elements):
             "jenjang":      jenjang,
             "alamat":       tags.get("addr:full", tags.get("addr:street", "")),
             "kelurahan":    tags.get("addr:suburb", tags.get("addr:village", tags.get("addr:quarter", ""))),
-            "kecamatan":    "Sukolilo",
+            "kecamatan":    "Sukolilo (Expanded)",
             "kota":         "Surabaya",
             "lat":          round(lat, 7),
             "lng":          round(lng, 7),
@@ -121,7 +122,7 @@ def parse_elements(elements):
 if __name__ == "__main__":
     print("=" * 60)
     print("TSP MBG - Scraping Sekolah Kecamatan Sukolilo")
-    print("Mode: TSP Murni (Struktur Folder Flat)")
+    print("Mode: TSP Murni (Struktur Folder Flat) - Expanded Radius")
     print("=" * 60)
 
     print("\nMengambil data dari OSM...")

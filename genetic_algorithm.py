@@ -141,6 +141,8 @@ def get_osrm_geometry(coords):
     except: return coords
 
 if __name__ == "__main__":
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 1000)
     df_schools, df_sppg = pd.read_csv("sekolah_terklaster.csv"), pd.read_csv("sppg_sukolilo.csv")
     G_global = setup_global_network()
     unique_sppgs = sorted(df_schools["sppg_terdekat"].unique())

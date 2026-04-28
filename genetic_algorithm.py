@@ -1,6 +1,3 @@
-# ==========================================
-# EXPERIMENT GA - MBG SUKOLILO (COMPETITIVE)
-# ==========================================
 import pandas as pd
 import random
 import osmnx as ox

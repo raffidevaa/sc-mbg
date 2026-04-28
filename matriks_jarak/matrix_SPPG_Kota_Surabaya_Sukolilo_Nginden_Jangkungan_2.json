@@ -1,0 +1,62 @@
+{
+    "sppg_pusat": "SPPG Kota Surabaya Sukolilo Nginden Jangkungan 2",
+    "jumlah_node": 6,
+    "node_names": [
+        "SPPG Kota Surabaya Sukolilo Nginden Jangkungan 2",
+        "Sd Negeri Kedung Baruk I / 275",
+        "Sd Negeri Kendang Sari Iii",
+        "Sd Negeri Semolowaru 4/614",
+        "Sma Negeri 14 Surabaya",
+        "Smp Negeri 23 Surabaya"
+    ],
+    "distance_matrix_meters": [
+        [
+            0,
+            1545.1,
+            2419.4,
+            3295.9,
+            1985.6,
+            3983.3
+        ],
+        [
+            2320.9,
+            0,
+            2283.3,
+            3000.5,
+            1849.5,
+            3688
+        ],
+        [
+            2687.2,
+            3230.5,
+            0,
+            4981.3,
+            1376.8,
+            3165
+        ],
+        [
+            2288.9,
+            2272.7,
+            4187.7,
+            0,
+            3753.9,
+            3718.7
+        ],
+        [
+            2817.9,
+            2586.3,
+            557.9,
+            4337,
+            0,
+            2453.6
+        ],
+        [
+            4598.8,
+            2646.3,
+            4561.3,
+            3458.6,
+            4127.5,
+            0
+        ]
+    ]
+}

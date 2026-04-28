@@ -1,0 +1,62 @@
+{
+    "sppg_pusat": "SPPG Kota Surabaya Sukolilo Klampis Ngasem",
+    "jumlah_node": 6,
+    "node_names": [
+        "SPPG Kota Surabaya Sukolilo Klampis Ngasem",
+        "Sd Negeri Klampis Ngasem 3",
+        "Sd Negeri Klampis Ngasem 5",
+        "Sd Negeri Manyar Sabrangan 3",
+        "Sd Negeri Manyar Sabrangan Ii/231",
+        "Sd Negeri Mojo Vi Nomor 225"
+    ],
+    "distance_matrix_meters": [
+        [
+            0,
+            1910.1,
+            1730.1,
+            1745.8,
+            1932.3,
+            4029.8
+        ],
+        [
+            1745.8,
+            0,
+            771.7,
+            657.4,
+            883.7,
+            2198.9
+        ],
+        [
+            1518.6,
+            776.4,
+            0,
+            133.8,
+            1357.5,
+            2846.7
+        ],
+        [
+            1534.3,
+            660.7,
+            133.8,
+            0,
+            1241.8,
+            2731.1
+        ],
+        [
+            1680.4,
+            1396.3,
+            1216.4,
+            1232.1,
+            0,
+            3466.7
+        ],
+        [
+            4489.1,
+            2955.8,
+            3598.9,
+            3484.6,
+            3895.5,
+            0
+        ]
+    ]
+}

@@ -1,0 +1,62 @@
+{
+    "sppg_pusat": "SPPG Kota Surabaya Sukolilo Medokan Semampir",
+    "jumlah_node": 6,
+    "node_names": [
+        "SPPG Kota Surabaya Sukolilo Medokan Semampir",
+        "Sd Negeri Wonorejo Nomor 274",
+        "Ma Negeri Surabaya",
+        "Sma Negeri 20 Surabaya",
+        "Mts Negeri 1 Surabaya",
+        "Smp Negeri 30 Surabaya"
+    ],
+    "distance_matrix_meters": [
+        [
+            0,
+            4811.7,
+            4624.2,
+            2227.6,
+            2552.1,
+            2158
+        ],
+        [
+            6082.9,
+            0,
+            572.4,
+            4904.6,
+            4618.6,
+            5002.3
+        ],
+        [
+            5895.3,
+            572.4,
+            0,
+            4717,
+            4431,
+            4814.7
+        ],
+        [
+            2132.5,
+            4989.8,
+            4802.2,
+            0,
+            391.3,
+            164.5
+        ],
+        [
+            2456.9,
+            4703.8,
+            4516.2,
+            391.3,
+            0,
+            489
+        ],
+        [
+            2062.9,
+            5087.5,
+            4899.9,
+            164.5,
+            489,
+            0
+        ]
+    ]
+}

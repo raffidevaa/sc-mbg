@@ -1,0 +1,78 @@
+{
+    "sppg_pusat": "SPPG Kota Surabaya Sukolilo Nginden Jangkungan",
+    "jumlah_node": 7,
+    "node_names": [
+        "SPPG Kota Surabaya Sukolilo Nginden Jangkungan",
+        "Sd Negeri Nginden Jangkungan 2 No 611",
+        "Sd Negeri Pacarkembang",
+        "Sd Negeri Ploso I",
+        "Sd Negeri Ploso Iii",
+        "Sd Negeri Ploso V",
+        "Smp Negeri 9 Surabaya"
+    ],
+    "distance_matrix_meters": [
+        [
+            0,
+            350.7,
+            8188.3,
+            8404.8,
+            9092.8,
+            9779.4,
+            8522.8
+        ],
+        [
+            324.6,
+            0,
+            7837.6,
+            8054.1,
+            8742,
+            8897.2,
+            8172.1
+        ],
+        [
+            7941.5,
+            7575.7,
+            0,
+            2135.8,
+            1911,
+            2287.3,
+            1341.1
+        ],
+        [
+            9819.1,
+            9453.3,
+            1321,
+            0,
+            1441.4,
+            1817.7,
+            400
+        ],
+        [
+            8968.2,
+            8602.4,
+            1193.6,
+            1582.3,
+            0,
+            779.3,
+            787.5
+        ],
+        [
+            9540.8,
+            8732.7,
+            1766.3,
+            2154.9,
+            779.3,
+            0,
+            1360.2
+        ],
+        [
+            9749.1,
+            9383.4,
+            1011.4,
+            885.1,
+            1131.8,
+            1508.1,
+            0
+        ]
+    ]
+}

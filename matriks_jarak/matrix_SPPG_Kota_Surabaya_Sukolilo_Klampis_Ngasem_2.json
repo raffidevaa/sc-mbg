@@ -1,0 +1,62 @@
+{
+    "sppg_pusat": "SPPG Kota Surabaya Sukolilo Klampis Ngasem 2",
+    "jumlah_node": 6,
+    "node_names": [
+        "SPPG Kota Surabaya Sukolilo Klampis Ngasem 2",
+        "Sd Negeri Kalisari I",
+        "Sd Negeri Kalisari Ii",
+        "Sd Negeri Kejawen Putih 1",
+        "Sd Negeri Keputih 245",
+        "Smk Negeri 10 Surabaya"
+    ],
+    "distance_matrix_meters": [
+        [
+            0,
+            5055.7,
+            5315.7,
+            2990.8,
+            255.4,
+            2115.3
+        ],
+        [
+            4326.5,
+            0,
+            2250.2,
+            2337.9,
+            4567.3,
+            4581.1
+        ],
+        [
+            4486.1,
+            2169.6,
+            0,
+            2497.5,
+            4726.9,
+            4740.7
+        ],
+        [
+            2990.8,
+            2594.5,
+            2854.5,
+            0,
+            3231.6,
+            2243.2
+        ],
+        [
+            255.4,
+            5525.4,
+            5785.4,
+            3231.6,
+            0,
+            2356.1
+        ],
+        [
+            2115.3,
+            4837.7,
+            5097.7,
+            2243.2,
+            2356.1,
+            0
+        ]
+    ]
+}

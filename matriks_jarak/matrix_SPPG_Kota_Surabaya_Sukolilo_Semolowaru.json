@@ -1,0 +1,78 @@
+{
+    "sppg_pusat": "SPPG Kota Surabaya Sukolilo Semolowaru",
+    "jumlah_node": 7,
+    "node_names": [
+        "SPPG Kota Surabaya Sukolilo Semolowaru",
+        "Sd Negeri Kalijudan Ii",
+        "Sd Negeri Medokan Semampir 1",
+        "Sd Negeri Penjaringan I / 271",
+        "Sd Negeri Penjaringan Sari Ii",
+        "Sdn Semolowaru 2/262",
+        "Sdn Sutorejo 1-240"
+    ],
+    "distance_matrix_meters": [
+        [
+            0,
+            6679.6,
+            1540.4,
+            4777.2,
+            4477.9,
+            705.1,
+            9317.5
+        ],
+        [
+            6362,
+            0,
+            6812.4,
+            10049.2,
+            9749.9,
+            6284,
+            3622
+        ],
+        [
+            2726,
+            7656.9,
+            0,
+            3435.4,
+            3136.1,
+            2666.5,
+            10294.9
+        ],
+        [
+            4495.1,
+            9426,
+            3751,
+            0,
+            1900.6,
+            4435.6,
+            12064
+        ],
+        [
+            4617.3,
+            9548.2,
+            3873.2,
+            1991.9,
+            0,
+            4557.8,
+            12186.2
+        ],
+        [
+            544.6,
+            5974.4,
+            835.3,
+            4072.1,
+            3772.8,
+            0,
+            8612.4
+        ],
+        [
+            7646.5,
+            3589.8,
+            8097,
+            11333.8,
+            11034.5,
+            7568.6,
+            0
+        ]
+    ]
+}

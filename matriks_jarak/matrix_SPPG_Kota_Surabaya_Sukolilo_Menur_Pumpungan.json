@@ -1,0 +1,78 @@
+{
+    "sppg_pusat": "SPPG Kota Surabaya Sukolilo Menur Pumpungan",
+    "jumlah_node": 7,
+    "node_names": [
+        "SPPG Kota Surabaya Sukolilo Menur Pumpungan",
+        "Sd Negeri Menur Pumpungan",
+        "Sd Negeri Menur Pumpungan 4",
+        "Sd Negeri Menur Pumpungan V",
+        "Sd Negeri Mojo Viii Nomor 227",
+        "Sd Negeri Pacar Kembang Iv",
+        "Smk Negeri 5 Surabaya"
+    ],
+    "distance_matrix_meters": [
+        [
+            0,
+            1526.6,
+            2443.6,
+            2612.9,
+            3863.8,
+            8365.7,
+            6231.1
+        ],
+        [
+            2564.9,
+            0,
+            1915.2,
+            1564.2,
+            2527.4,
+            6454.1,
+            4894.7
+        ],
+        [
+            649.6,
+            2335.8,
+            0,
+            455,
+            3934.3,
+            7861,
+            6301.6
+        ],
+        [
+            1005.1,
+            1021.7,
+            355.4,
+            0,
+            3358.9,
+            7285.6,
+            5726.2
+        ],
+        [
+            4355.1,
+            2410.2,
+            3705.5,
+            3354.4,
+            0,
+            4260,
+            2700.6
+        ],
+        [
+            6583,
+            4638.1,
+            5933.4,
+            5582.3,
+            2490.6,
+            0,
+            2871.1
+        ],
+        [
+            6524,
+            4579.1,
+            5874.4,
+            5523.3,
+            2431.6,
+            1756.5,
+            0
+        ]
+    ]
+}

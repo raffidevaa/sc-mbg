@@ -45,6 +45,7 @@ class SimulatedAnnealingTSP:
         best = current[:]
 
         T = T_INIT
+        history = []
 
         while T > T_MIN:
             neighbor = self.get_neighbor(current)
@@ -61,9 +62,12 @@ class SimulatedAnnealingTSP:
             if self.fitness(current) < self.fitness(best):
                 best = current
 
+            # simpan konvergensi (km)
+            history.append(self.fitness(best) / 1000)
+
             T *= ALPHA
 
-        return best, self.fitness(best)
+        return best, self.fitness(best), history
 
 # ==========================================
 # OSRM ROUTE
@@ -93,10 +97,12 @@ def main():
     df_sppg = pd.read_csv("sppg_sukolilo.csv", sep=None, engine='python')
 
     print("Simulated Annealing for Route Optimization\n")
+    total_semua_jarak = 0
 
     m = folium.Map(location=[-7.2891, 112.7838], zoom_start=13)
     warna_list = ['blue', 'green', 'purple', 'orange', 'red', 'black']
 
+    all_histories = {}
     for idx, file_json in enumerate(os.listdir(folder_matrix)):
         if not file_json.endswith(".json"): continue
 
@@ -110,10 +116,13 @@ def main():
         print(f"Processing cluster: {nama_sppg}")
 
         sa = SimulatedAnnealingTSP(matrix)
-        best_route, best_distance = sa.run()
+        best_route, best_distance, history = sa.run()
+        all_histories[nama_sppg] = history
 
         jarak_km = round(best_distance / 1000, 2)
         print(f"Total Distance : {jarak_km} km")
+
+        total_semua_jarak += best_distance
 
         df_klaster = df_master[df_master['sppg_terdekat'] == nama_sppg].reset_index()
         baris_sppg = df_sppg[df_sppg['nama'] == nama_sppg].iloc[0]
@@ -159,11 +168,16 @@ def main():
 
         folium.PolyLine(jalur, color=warna, weight=5).add_to(group)
         group.add_to(m)
+    
+    with open("konvergensi_SA.json", "w") as f:
+        json.dump(all_histories, f)
 
     folium.LayerControl().add_to(m)
     m.save("Peta_Rute_SA_MBG_Sukolilo.html")
 
     print("\nProcess completed. Map has been saved as 'Peta_Rute_SA_MBG_Sukolilo.html'.")
+    total_km = round(total_semua_jarak / 1000, 2)
+    print(f"\nTotal Jarak Seluruh SPPG : {total_km} km")
 
 if __name__ == "__main__":
     main()

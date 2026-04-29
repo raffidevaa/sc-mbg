@@ -71,20 +71,6 @@ def crossover_ox1(p1, p2):
             child[i] = p2[p2_idx]
     return child
 
-def crossover_pmx(p1, p2):
-    size = len(p1)
-    if size < 2: return p1[:]
-    a, b = sorted(random.sample(range(size), 2))
-    child = [None] * size
-    child[a:b] = p1[a:b]
-    mapping = {p1[i]: p2[i] for i in range(a, b)}
-    for i in range(size):
-        if child[i] is None:
-            val = p2[i]
-            while val in child[a:b]: val = mapping[val]
-            child[i] = val
-    return child
-
 def mutation_inversion(route, rate=0.2):
     if len(route) < 2 or random.random() > rate: return route[:]
     a, b = sorted(random.sample(range(len(route)), 2))

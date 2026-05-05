@@ -1,0 +1,220 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Analisis SA MBG Sukolilo</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            body {
+                font-family: Arial;
+                background: #f5f6fa;
+                padding: 20px;
+            }
+            .card {
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            .grid {
+                display: flex;
+                gap: 20px;
+            }
+            .box {
+                flex: 1;
+                background: #ecf0f1;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th, td {
+                border: 1px solid black;
+                padding: 8px;
+                text-align: center;
+            }
+            table th {
+                background: #f0f0f0;
+            }
+        </style>
+    </head>
+
+    <body>
+
+    <div class="card">
+        <h2>🔥 Analisis Simulated Annealing — Distribusi MBG Sukolilo</h2>
+
+        <div class="grid">
+            <div class="box">
+                <h3>123.57 km</h3>
+                <p>Total jarak semua SPPG</p>
+            </div>
+
+            <div class="box">
+                <h3>7</h3>
+                <p>Jumlah SPPG</p>
+            </div>
+
+            <div class="box">
+                <h3>38</h3>
+                <p>Total sekolah dilayani</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Grafik Konvergensi SA</h3>
+        <canvas id="chart"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>📋 Rekap Hasil per SPPG</h3>
+        <table>
+            <tr>
+                <th>SPPG</th>
+                <th>Jumlah Sekolah</th>
+                <th>Jarak (km)</th>
+                <th>T_init</th>
+                <th>Alpha</th>
+            </tr>
+            
+        <tr>
+            <td>SPPG Kota Surabaya Sukolilo Klampis Ngasem</td>
+            <td>5</td>
+            <td>10.75</td>
+            <td>500</td>
+            <td>0.995</td>
+        </tr>
+            
+        <tr>
+            <td>SPPG Kota Surabaya Sukolilo Klampis Ngasem 2</td>
+            <td>5</td>
+            <td>15.19</td>
+            <td>100</td>
+            <td>0.995</td>
+        </tr>
+            
+        <tr>
+            <td>SPPG Kota Surabaya Sukolilo Medokan Semampir</td>
+            <td>5</td>
+            <td>13.21</td>
+            <td>500</td>
+            <td>0.999</td>
+        </tr>
+            
+        <tr>
+            <td>SPPG Kota Surabaya Sukolilo Menur Pumpungan</td>
+            <td>6</td>
+            <td>20.1</td>
+            <td>100</td>
+            <td>0.995</td>
+        </tr>
+            
+        <tr>
+            <td>SPPG Kota Surabaya Sukolilo Nginden Jangkungan</td>
+            <td>6</td>
+            <td>20.23</td>
+            <td>100</td>
+            <td>0.995</td>
+        </tr>
+            
+        <tr>
+            <td>SPPG Kota Surabaya Sukolilo Nginden Jangkungan 2</td>
+            <td>5</td>
+            <td>15.74</td>
+            <td>100</td>
+            <td>0.99</td>
+        </tr>
+            
+        <tr>
+            <td>SPPG Kota Surabaya Sukolilo Semolowaru</td>
+            <td>6</td>
+            <td>28.35</td>
+            <td>500</td>
+            <td>0.999</td>
+        </tr>
+            
+            <tr style="font-weight:bold; background:#dfe6e9;">
+                <td>TOTAL</td>
+                <td>38</td>
+                <td>123.57</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+        </table>
+
+    </div>
+
+    <script>
+    const data = {
+        labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70],
+        datasets: [
+            {
+                    label: "SPPG Kota Surabaya Sukolilo Klampis Ngasem",
+                    data: [11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.7, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 11.14, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75, 10.75],
+                    fill: false,
+                    tension: 0.3
+                },{
+                    label: "SPPG Kota Surabaya Sukolilo Klampis Ngasem 2",
+                    data: [20.63, 20.63, 20.63, 20.63, 20.63, 20.63, 20.63, 20.63, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19, 15.19],
+                    fill: false,
+                    tension: 0.3
+                },{
+                    label: "SPPG Kota Surabaya Sukolilo Medokan Semampir",
+                    data: [13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21, 13.21],
+                    fill: false,
+                    tension: 0.3
+                },{
+                    label: "SPPG Kota Surabaya Sukolilo Menur Pumpungan",
+                    data: [24.9, 24.9, 24.9, 24.9, 24.9, 24.9, 24.9, 24.9, 21.04, 21.04, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91, 20.91],
+                    fill: false,
+                    tension: 0.3
+                },{
+                    label: "SPPG Kota Surabaya Sukolilo Nginden Jangkungan",
+                    data: [37.65, 37.65, 37.65, 37.42, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 36.73, 21.38, 21.38, 21.38, 20.74, 20.74, 20.74, 20.42, 20.42, 20.42, 20.42, 20.42, 20.42, 20.42, 20.42, 20.42, 20.42, 20.42, 20.42, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23, 20.23],
+                    fill: false,
+                    tension: 0.3
+                },{
+                    label: "SPPG Kota Surabaya Sukolilo Nginden Jangkungan 2",
+                    data: [19.73, 19.73, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74, 15.74],
+                    fill: false,
+                    tension: 0.3
+                },{
+                    label: "SPPG Kota Surabaya Sukolilo Semolowaru",
+                    data: [35.3, 35.3, 35.3, 35.3, 35.3, 35.3, 35.3, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 33.14, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35, 28.35],
+                    fill: false,
+                    tension: 0.3
+                }
+        ]
+    };
+
+    new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Iterasi (dipotong sampai 70)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Jarak (km)'
+                    }
+                }
+            }
+        }
+    });
+    </script>
+
+    </body>
+    </html>
+    

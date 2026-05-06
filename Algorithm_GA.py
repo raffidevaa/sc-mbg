@@ -4,7 +4,14 @@ import folium
 import requests
 import json
 import os
+import optuna
 from copy import deepcopy
+
+# CONFIGURATION
+MODE_TUNING = True  # True: Optuna, False: Default
+DEFAULT_POP_SIZE = 50
+DEFAULT_MUT_RATE = 0.2
+DEFAULT_GENERATIONS = 100
 
 #  LOAD DATA & MATRICES (SYNC WITH OSRM)
 def load_all_data():
@@ -112,6 +119,25 @@ def mutation_scramble(route, rate=0.2):
     random.shuffle(subset)
     res[a:b] = subset
     return res
+
+# HYPERPARAMETER TUNING (OPTUNA)
+def optuna_tuning_ga(num_nodes, dist_matrix, sel_op, cross_op, mut_op):
+    print(f"   🔍 Tuning parameters for {num_nodes} nodes...")
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    
+    def objective(trial):
+        p_size = trial.suggest_int("pop_size", 20, 100, step=10)
+        m_rate = trial.suggest_float("mut_rate", 0.01, 0.4)
+        
+        # Run a short evaluation (50 generations)
+        _, dist, _ = run_ga(num_nodes, dist_matrix, sel_op, cross_op, mut_op, 
+                           pop_size=p_size, generations=50, mut_rate=m_rate)
+        return dist
+
+    study = optuna.create_study(direction="minimize")
+    study.optimize(objective, n_trials=15)
+    
+    return study.best_params["pop_size"], study.best_params["mut_rate"]
 
 # CORE GA ENGINE
 def run_ga(num_nodes, dist_matrix, sel_op, cross_op, mut_op, pop_size=30, generations=100, mut_rate=0.2, init_pop=None):
@@ -275,6 +301,7 @@ def simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_nam
             <td>{r['sppg']}</td>
             <td>{r['jumlah_sekolah']}</td>
             <td>{r['jarak_rute_km']:.2f} km</td>
+            <td>Pop: {r['pop_size']}, Mut: {r['mut_rate']}</td>
             <td>{best_scen_name}</td>
         </tr>"""
 
@@ -315,6 +342,10 @@ def simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_nam
             <h3>{total_sekolah}</h3>
             <p>Total Sekolah Dilayani</p>
         </div>
+        <div class="box" style="border-left-color: #9b59b6;">
+            <h3>{'Optuna' if MODE_TUNING else 'Default'}</h3>
+            <p>Mode Tuning</p>
+        </div>
     </div>
 </div>
 
@@ -332,6 +363,7 @@ def simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_nam
                 <th>Pusat SPPG</th>
                 <th>Sekolah</th>
                 <th>Jarak Rute</th>
+                <th>Parameter GA</th>
                 <th>Skenario Terbaik</th>
             </tr>
         </thead>
@@ -341,6 +373,7 @@ def simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_nam
                 <td>TOTAL</td>
                 <td>{total_sekolah}</td>
                 <td>{total_km:.2f} km</td>
+                <td>-</td>
                 <td>-</td>
             </tr>
         </tbody>
@@ -408,7 +441,7 @@ if __name__ == "__main__":
 
     all_performance = []
     print("\n" + "="*70)
-    print("GA PERFORMANCE COMPARISON")
+    print("GA PERFORMANCE")
     print("="*70)
 
     for scen in scenarios:
@@ -431,6 +464,8 @@ if __name__ == "__main__":
     best_scen = next(s for s in scenarios if s["name"] == best_scen_name)
     
     print(f"\n[*] Generating final map for best scenario: {best_scen_name}")
+    print(f"    Mode: {'Optuna Tuning' if MODE_TUNING else 'Default Parameters'}")
+    
     m = folium.Map(location=[-7.2991, 112.7838], zoom_start=14)
     colors = ["blue","green","purple","orange","darkred","cadetblue","black"]
     
@@ -443,9 +478,16 @@ if __name__ == "__main__":
 
     for idx, sppg_name in enumerate(unique_sppgs):
         data = cluster_data[sppg_name]
+        
+        if MODE_TUNING:
+            opt_pop, opt_mut = optuna_tuning_ga(data["num_nodes"], data["dist_matrix"], 
+                                               best_scen['sel'], best_scen['cross'], best_scen['mut'])
+        else:
+            opt_pop, opt_mut = DEFAULT_POP_SIZE, DEFAULT_MUT_RATE
+            
         # Higher budget for final visualization
         route, d, history = run_ga(data["num_nodes"], data["dist_matrix"], best_scen['sel'], best_scen['cross'], best_scen['mut'], 
-                          pop_size=50, generations=100)
+                          pop_size=opt_pop, generations=DEFAULT_GENERATIONS, mut_rate=opt_mut)
         
         dist_km = round(d/1000, 2)
         total_km += dist_km
@@ -456,7 +498,9 @@ if __name__ == "__main__":
         rekap_hasil.append({
             "sppg": sppg_name,
             "jumlah_sekolah": data["num_nodes"] - 1,
-            "jarak_rute_km": dist_km
+            "jarak_rute_km": dist_km,
+            "pop_size": opt_pop,
+            "mut_rate": round(opt_mut, 3)
         })
         
         c = colors[idx % len(colors)]
@@ -476,7 +520,8 @@ if __name__ == "__main__":
                         f"<b>🏭 Dapur SPPG</b><br>{row['nama']}<br>"
                         f"Melayani: {data['num_nodes']-1} sekolah<br>"
                         f"Jarak rute: {dist_km} km<br>"
-                        f"Scenario: {best_scen_name}",
+                        f"Scenario: {best_scen_name}<br>"
+                        f"Params: Pop={opt_pop}, Mut={opt_mut:.2f}",
                         max_width=280
                     ),
                     tooltip=f"🏭 {row['nama']}",
@@ -504,7 +549,7 @@ if __name__ == "__main__":
         Total jarak    : <b>{total_km:.2f} km</b><br>
         Jumlah SPPG    : <b>{len(unique_sppgs)}</b><br>
         Jumlah sekolah : <b>{total_sekolah}</b><br>
-        Best Scenario  : <b>{best_scen_name}</b>
+        Mode           : <b>{'Optuna' if MODE_TUNING else 'Default'}</b>
     </div>"""
     
     m.get_root().html.add_child(folium.Element(info_html))

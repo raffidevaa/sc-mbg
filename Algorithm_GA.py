@@ -115,10 +115,13 @@ def mutation_scramble(route, rate=0.2):
 
 # CORE GA ENGINE
 def run_ga(num_nodes, dist_matrix, sel_op, cross_op, mut_op, pop_size=30, generations=100, mut_rate=0.2, init_pop=None):
-    if num_nodes <= 1: return [0, 0], 0
+    if num_nodes <= 1: return [0, 0], 0, [0]
     base = list(range(1, num_nodes))
     pop = init_pop if init_pop else [random.sample(base, len(base)) for _ in range(pop_size)]
+    
+    history = []
     best = min(pop, key=lambda x: calculate_fitness(x, dist_matrix))
+    
     for _ in range(generations):
         new_pop = [best]
         while len(new_pop) < pop_size:
@@ -129,7 +132,9 @@ def run_ga(num_nodes, dist_matrix, sel_op, cross_op, mut_op, pop_size=30, genera
         curr_best = min(pop, key=lambda x: calculate_fitness(x, dist_matrix))
         if calculate_fitness(curr_best, dist_matrix) < calculate_fitness(best, dist_matrix):
             best = curr_best
-    return [0] + best + [0], calculate_fitness(best, dist_matrix)
+        history.append(calculate_fitness(best, dist_matrix))
+        
+    return [0] + best + [0], calculate_fitness(best, dist_matrix), history
 
 # OSRM GEOMETRY
 def get_osrm_geometry(coords):
@@ -138,6 +143,237 @@ def get_osrm_geometry(coords):
         r = requests.get(f"http://router.project-osrm.org/route/v1/driving/{coords_str}?overview=full&geometries=geojson", timeout=10)
         return [(lat, lon) for lon, lat in r.json()["routes"][0]["geometry"]["coordinates"]]
     except: return coords
+
+# GRAFIK KONVERGENSI (HTML + Chart.js)
+def simpan_grafik_konvergensi_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_name):
+    max_len = max(len(h) for h in semua_history) if semua_history else 100
+    labels_js = json.dumps(list(range(1, max_len + 1)))
+    warna_list = ["#E74C3C","#3498DB","#2ECC71","#F39C12","#9B59B6","#1ABC9C","#E67E22"]
+
+    datasets = []
+    for i, (history, nama) in enumerate(zip(semua_history, nama_sppg_list)):
+        history_km = [round(d / 1000, 3) for d in history]
+        while len(history_km) < max_len:
+            history_km.append(history_km[-1])
+        warna = warna_list[i % len(warna_list)]
+        datasets.append(f"""{{
+            label: "{nama}",
+            data: {json.dumps(history_km)},
+            borderColor: "{warna}",
+            backgroundColor: "{warna}22",
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3
+        }}""")
+
+    tabel_rows = ""
+    for r in rekap_hasil:
+        tabel_rows += f"""
+        <tr>
+            <td>{r['sppg']}</td>
+            <td style="text-align:center">{r['jumlah_sekolah']}</td>
+            <td style="text-align:center">{r['jarak_rute_km']} km</td>
+        </tr>"""
+
+    total_km = sum(r["jarak_rute_km"] for r in rekap_hasil)
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Konvergensi GA - MBG Sukolilo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {{ font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }}
+        .container {{ background: white; padding: 24px; border-radius: 10px;
+                      box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 960px; margin: auto; }}
+        h2 {{ color: #333; margin-top: 0; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }}
+        th {{ background: #f0f0f0; padding: 8px 12px; text-align: left; border-bottom: 2px solid #ddd; }}
+        td {{ padding: 7px 12px; border-bottom: 1px solid #eee; }}
+        tr:hover td {{ background: #f9f9f9; }}
+        .total {{ font-weight: bold; background: #f0f0f0; }}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🧬 Konvergensi GA — Distribusi MBG Kecamatan Sukolilo</h2>
+    <p style="color:#666">Best Scenario: <b>{best_scen_name}</b> | Sumbu X: Generasi | Sumbu Y: Jarak terbaik (km)</p>
+    <canvas id="chart" height="380"></canvas>
+
+    <h3 style="margin-top:28px">📊 Rekap Hasil per SPPG</h3>
+    <table>
+        <tr>
+            <th>SPPG</th>
+            <th style="text-align:center">Sekolah</th>
+            <th style="text-align:center">Jarak Rute</th>
+        </tr>
+        {tabel_rows}
+        <tr class="total">
+            <td><b>TOTAL</b></td>
+            <td style="text-align:center"><b>{sum(r['jumlah_sekolah'] for r in rekap_hasil)}</b></td>
+            <td style="text-align:center"><b>{total_km:.2f} km</b></td>
+        </tr>
+    </table>
+</div>
+
+<script>
+new Chart(document.getElementById('chart').getContext('2d'), {{
+    type: 'line',
+    data: {{
+        labels: {labels_js},
+        datasets: [{",".join(datasets)}]
+    }},
+    options: {{
+        responsive: true,
+        plugins: {{
+            legend: {{ position: 'bottom', labels: {{ boxWidth: 12, font: {{ size: 11 }} }} }},
+            title: {{ display: true, text: 'Konvergensi Genetic Algorithm per Klaster SPPG' }}
+        }},
+        scales: {{
+            x: {{ title: {{ display: true, text: 'Generasi' }} }},
+            y: {{ title: {{ display: true, text: 'Jarak Terbaik (km)' }} }}
+        }}
+    }}
+}});
+</script>
+</body>
+</html>"""
+
+    with open("Grafik_Konvergensi_GA.html", "w", encoding="utf-8") as f:
+        f.write(html)
+    print("📊 Grafik konvergensi disimpan: Grafik_Konvergensi_GA.html")
+
+# DASHBOARD ANALISIS GA
+def simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_name):
+    total_km = sum(r["jarak_rute_km"] for r in rekap_hasil)
+    total_sekolah = sum(r["jumlah_sekolah"] for r in rekap_hasil)
+    
+    max_len = max(len(h) for h in semua_history) if semua_history else 100
+    labels_js = json.dumps(list(range(1, max_len + 1)))
+    
+    datasets = []
+    warna_list = ["#E74C3C","#3498DB","#2ECC71","#F39C12","#9B59B6","#1ABC9C","#E67E22"]
+    for i, (history, nama) in enumerate(zip(semua_history, nama_sppg_list)):
+        history_km = [round(d / 1000, 3) for d in history]
+        while len(history_km) < max_len:
+            history_km.append(history_km[-1])
+        datasets.append(f"""{{
+            label: "{nama}",
+            data: {json.dumps(history_km)},
+            borderColor: "{warna_list[i % len(warna_list)]}",
+            fill: false,
+            tension: 0.3,
+            pointRadius: 0
+        }}""")
+
+    table_rows = ""
+    for r in rekap_hasil:
+        table_rows += f"""
+        <tr>
+            <td>{r['sppg']}</td>
+            <td>{r['jumlah_sekolah']}</td>
+            <td>{r['jarak_rute_km']:.2f} km</td>
+            <td>{best_scen_name}</td>
+        </tr>"""
+
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Analisis GA MBG Sukolilo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f6fa; padding: 25px; color: #2f3640; }}
+        .card {{ background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }}
+        h2, h3 {{ margin-top: 0; color: #2f3542; }}
+        .grid {{ display: flex; gap: 20px; margin-bottom: 5px; }}
+        .box {{ flex: 1; background: #f1f2f6; padding: 20px; border-radius: 10px; text-align: center; border-left: 5px solid #3498db; }}
+        .box h3 {{ margin: 0; font-size: 24px; color: #2f3542; }}
+        .box p {{ margin: 5px 0 0; color: #747d8c; font-size: 14px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }}
+        th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #dcdde1; }}
+        th {{ background: #f8f9fa; color: #2f3542; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }}
+        tr:hover {{ background: #f1f2f6; }}
+        .total-row {{ font-weight: bold; background: #dfe4ea !important; }}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🧬 Analisis Genetic Algorithm — Distribusi MBG Sukolilo</h2>
+    <div class="grid">
+        <div class="box">
+            <h3>{total_km:.2f} km</h3>
+            <p>Total Jarak Rute</p>
+        </div>
+        <div class="box" style="border-left-color: #2ecc71;">
+            <h3>{len(nama_sppg_list)}</h3>
+            <p>Jumlah SPPG</p>
+        </div>
+        <div class="box" style="border-left-color: #e67e22;">
+            <h3>{total_sekolah}</h3>
+            <p>Total Sekolah Dilayani</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>📈 Grafik Konvergensi GA</h3>
+    <p style="font-size: 13px; color: #747d8c; margin-bottom: 20px;">Menampilkan penurunan total jarak (km) terhadap jumlah generasi.</p>
+    <canvas id="chart" height="100"></canvas>
+</div>
+
+<div class="card">
+    <h3>📋 Rekapitulasi Hasil per SPPG</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Pusat SPPG</th>
+                <th>Sekolah</th>
+                <th>Jarak Rute</th>
+                <th>Skenario Terbaik</th>
+            </tr>
+        </thead>
+        <tbody>
+            {table_rows}
+            <tr class="total-row">
+                <td>TOTAL</td>
+                <td>{total_sekolah}</td>
+                <td>{total_km:.2f} km</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+new Chart(document.getElementById('chart'), {{
+    type: 'line',
+    data: {{
+        labels: {labels_js},
+        datasets: [{",".join(datasets)}]
+    }},
+    options: {{
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {{
+            legend: {{ position: 'bottom', labels: {{ usePointStyle: true, boxWidth: 10, font: {{ size: 11 }} }} }}
+        }},
+        scales: {{
+            x: {{ title: {{ display: true, text: 'Generasi' }} }},
+            y: {{ title: {{ display: true, text: 'Jarak (km)' }} }}
+        }}
+    }}
+}});
+</script>
+
+</body>
+</html>"""
+
+    with open("Analisis_GA_MBG_Sukolilo.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print("📊 Dashboard analisis disimpan: Analisis_GA_MBG_Sukolilo.html")
 
 # MAIN
 if __name__ == "__main__":
@@ -152,14 +388,14 @@ if __name__ == "__main__":
 
     scenarios = [
         {"name": "Tourn + OX1 + Inv", "sel": selection_tournament, "cross": crossover_ox1, "mut": mutation_inversion},
-        {"name": "Roul + OX1 + Inv", "sel": selection_roulette, "cross": crossover_ox1, "mut": mutation_inversion},
-        {"name": "SUS + OX1 + Inv", "sel": selection_sus, "cross": crossover_ox1, "mut": mutation_inversion},
-        {"name": "Tourn + OX1 + Swap", "sel": selection_tournament, "cross": crossover_ox1, "mut": mutation_swap},
-        {"name": "Roul + OX1 + Swap", "sel": selection_roulette, "cross": crossover_ox1, "mut": mutation_swap},
-        {"name": "SUS + OX1 + Swap", "sel": selection_sus, "cross": crossover_ox1, "mut": mutation_swap},
-        {"name": "Tourn + OX1 + Scramble", "sel": selection_tournament, "cross": crossover_ox1, "mut": mutation_scramble},
-        {"name": "Roul + OX1 + Scramble", "sel": selection_roulette, "cross": crossover_ox1, "mut": mutation_scramble},
-        {"name": "SUS + OX1 + Scramble", "sel": selection_sus, "cross": crossover_ox1, "mut": mutation_scramble},
+        # {"name": "Roul + OX1 + Inv", "sel": selection_roulette, "cross": crossover_ox1, "mut": mutation_inversion},
+        # {"name": "SUS + OX1 + Inv", "sel": selection_sus, "cross": crossover_ox1, "mut": mutation_inversion},
+        # {"name": "Tourn + OX1 + Swap", "sel": selection_tournament, "cross": crossover_ox1, "mut": mutation_swap},
+        # {"name": "Roul + OX1 + Swap", "sel": selection_roulette, "cross": crossover_ox1, "mut": mutation_swap},
+        # {"name": "SUS + OX1 + Swap", "sel": selection_sus, "cross": crossover_ox1, "mut": mutation_swap},
+        # {"name": "Tourn + OX1 + Scramble", "sel": selection_tournament, "cross": crossover_ox1, "mut": mutation_scramble},
+        # {"name": "Roul + OX1 + Scramble", "sel": selection_roulette, "cross": crossover_ox1, "mut": mutation_scramble},
+        # {"name": "SUS + OX1 + Scramble", "sel": selection_sus, "cross": crossover_ox1, "mut": mutation_scramble},
     ]
 
     # Pre-generate populations for fairness
@@ -178,7 +414,7 @@ if __name__ == "__main__":
     for scen in scenarios:
         for sppg_name in unique_sppgs:
             data = cluster_data[sppg_name]
-            _, dist = run_ga(data["num_nodes"], data["dist_matrix"], scen['sel'], scen['cross'], scen['mut'], 
+            _, dist, _ = run_ga(data["num_nodes"], data["dist_matrix"], scen['sel'], scen['cross'], scen['mut'], 
                              pop_size=50, generations=100, init_pop=deepcopy(initial_populations[sppg_name]))
             all_performance.append({"Scenario": scen['name'], "Cluster": sppg_name[-20:], "Dist (km)": round(dist/1000, 2)})
 
@@ -195,31 +431,90 @@ if __name__ == "__main__":
     best_scen = next(s for s in scenarios if s["name"] == best_scen_name)
     
     print(f"\n[*] Generating final map for best scenario: {best_scen_name}")
-    m = folium.Map(location=[-7.2991, 112.7838], zoom_start=13, tiles='CartoDB Voyager')
-    colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'cadetblue']
+    m = folium.Map(location=[-7.2991, 112.7838], zoom_start=14)
+    colors = ["blue","green","purple","orange","darkred","cadetblue","black"]
+    
+    total_km = 0
+    total_sekolah = 0
+    
+    semua_history = []
+    nama_sppg_list = []
+    rekap_hasil = []
 
     for idx, sppg_name in enumerate(unique_sppgs):
         data = cluster_data[sppg_name]
         # Higher budget for final visualization
-        route, d = run_ga(data["num_nodes"], data["dist_matrix"], best_scen['sel'], best_scen['cross'], best_scen['mut'], 
-                          pop_size=50, generations=200)
+        route, d, history = run_ga(data["num_nodes"], data["dist_matrix"], best_scen['sel'], best_scen['cross'], best_scen['mut'], 
+                          pop_size=50, generations=100)
+        
+        dist_km = round(d/1000, 2)
+        total_km += dist_km
+        total_sekolah += (data["num_nodes"] - 1)
+        
+        semua_history.append(history)
+        nama_sppg_list.append(sppg_name)
+        rekap_hasil.append({
+            "sppg": sppg_name,
+            "jumlah_sekolah": data["num_nodes"] - 1,
+            "jarak_rute_km": dist_km
+        })
         
         c = colors[idx % len(colors)]
-        group = folium.FeatureGroup(name=f"{sppg_name[-20:]} ({round(d/1000, 2)} km)")
+        group = folium.FeatureGroup(name=f"Rute {sppg_name} ({dist_km} km)")
         
         # Geometry sequence
         route_coords = [(data["points"].iloc[i]["lat"], data["points"].iloc[i]["lng"]) for i in route]
         path = get_osrm_geometry(route_coords)
-        folium.PolyLine(path, color=c, weight=5, opacity=0.8).add_to(group)
+        folium.PolyLine(path, color=c, weight=5, opacity=0.8, tooltip=f"{sppg_name} — {dist_km} km").add_to(group)
         
         for i, pt_idx in enumerate(route[:-1]):
             row = data["points"].iloc[pt_idx]
-            ic = 'industry' if row["tipe"] == "DEPOT" else 'graduation-cap'
-            folium.Marker([row["lat"], row["lng"]], 
-                          icon=folium.Icon(color='black' if row["tipe"] == "DEPOT" else c, icon=ic, prefix='fa'),
-                          tooltip=f"{'Depot' if row['tipe'] == 'DEPOT' else f'#{i}'}: {row['nama']}").add_to(group)
+            if row["tipe"] == "DEPOT":
+                folium.Marker(
+                    [row["lat"], row["lng"]],
+                    popup=folium.Popup(
+                        f"<b>🏭 Dapur SPPG</b><br>{row['nama']}<br>"
+                        f"Melayani: {data['num_nodes']-1} sekolah<br>"
+                        f"Jarak rute: {dist_km} km<br>"
+                        f"Scenario: {best_scen_name}",
+                        max_width=280
+                    ),
+                    tooltip=f"🏭 {row['nama']}",
+                    icon=folium.Icon(color="red", icon="cutlery", prefix="fa")
+                ).add_to(group)
+            else:
+                folium.Marker(
+                    [row["lat"], row["lng"]],
+                    popup=folium.Popup(
+                        f"<b>🏫 {row['nama']}</b><br>Kunjungan ke-{i}",
+                        max_width=200
+                    ),
+                    tooltip=f"Ke-{i}: {row['nama']}",
+                    icon=folium.Icon(color=c, icon="book")
+                ).add_to(group)
         group.add_to(m)
 
-    folium.LayerControl().add_to(m)
+    # Legend/Info box
+    info_html = f"""
+    <div style="position:fixed;bottom:30px;left:30px;z-index:1000;background:white;
+                padding:12px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.2);
+                font-family:Arial;font-size:12px">
+        <b>🧬 GA — Distribusi MBG Sukolilo</b><br>
+        <hr style="margin:5px 0">
+        Total jarak    : <b>{total_km:.2f} km</b><br>
+        Jumlah SPPG    : <b>{len(unique_sppgs)}</b><br>
+        Jumlah sekolah : <b>{total_sekolah}</b><br>
+        Best Scenario  : <b>{best_scen_name}</b>
+    </div>"""
+    
+    m.get_root().html.add_child(folium.Element(info_html))
+    folium.LayerControl(collapsed=False).add_to(m)
     m.save("Peta_Rute_GA_MBG_Sukolilo.html")
     print(f"\n[*] Map saved: Peta_Rute_GA_MBG_Sukolilo.html")
+
+    # SIMPAN GRAFIK KONVERGENSI
+    simpan_grafik_konvergensi_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_name)
+
+    # SIMPAN DASHBOARD ANALISIS
+    simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_name)
+

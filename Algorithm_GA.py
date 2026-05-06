@@ -195,8 +195,11 @@ if __name__ == "__main__":
     best_scen = next(s for s in scenarios if s["name"] == best_scen_name)
     
     print(f"\n[*] Generating final map for best scenario: {best_scen_name}")
-    m = folium.Map(location=[-7.2991, 112.7838], zoom_start=13, tiles='CartoDB Voyager')
-    colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'cadetblue']
+    m = folium.Map(location=[-7.2991, 112.7838], zoom_start=14)
+    colors = ["blue","green","purple","orange","darkred","cadetblue","black"]
+    
+    total_km = 0
+    total_sekolah = 0
 
     for idx, sppg_name in enumerate(unique_sppgs):
         data = cluster_data[sppg_name]
@@ -204,22 +207,59 @@ if __name__ == "__main__":
         route, d = run_ga(data["num_nodes"], data["dist_matrix"], best_scen['sel'], best_scen['cross'], best_scen['mut'], 
                           pop_size=50, generations=200)
         
+        dist_km = round(d/1000, 2)
+        total_km += dist_km
+        total_sekolah += (data["num_nodes"] - 1)
+        
         c = colors[idx % len(colors)]
-        group = folium.FeatureGroup(name=f"{sppg_name[-20:]} ({round(d/1000, 2)} km)")
+        group = folium.FeatureGroup(name=f"Rute {sppg_name} ({dist_km} km)")
         
         # Geometry sequence
         route_coords = [(data["points"].iloc[i]["lat"], data["points"].iloc[i]["lng"]) for i in route]
         path = get_osrm_geometry(route_coords)
-        folium.PolyLine(path, color=c, weight=5, opacity=0.8).add_to(group)
+        folium.PolyLine(path, color=c, weight=5, opacity=0.8, tooltip=f"{sppg_name} — {dist_km} km").add_to(group)
         
         for i, pt_idx in enumerate(route[:-1]):
             row = data["points"].iloc[pt_idx]
-            ic = 'industry' if row["tipe"] == "DEPOT" else 'graduation-cap'
-            folium.Marker([row["lat"], row["lng"]], 
-                          icon=folium.Icon(color='black' if row["tipe"] == "DEPOT" else c, icon=ic, prefix='fa'),
-                          tooltip=f"{'Depot' if row['tipe'] == 'DEPOT' else f'#{i}'}: {row['nama']}").add_to(group)
+            if row["tipe"] == "DEPOT":
+                folium.Marker(
+                    [row["lat"], row["lng"]],
+                    popup=folium.Popup(
+                        f"<b>🏭 Dapur SPPG</b><br>{row['nama']}<br>"
+                        f"Melayani: {data['num_nodes']-1} sekolah<br>"
+                        f"Jarak rute: {dist_km} km<br>"
+                        f"Scenario: {best_scen_name}",
+                        max_width=280
+                    ),
+                    tooltip=f"🏭 {row['nama']}",
+                    icon=folium.Icon(color="red", icon="cutlery", prefix="fa")
+                ).add_to(group)
+            else:
+                folium.Marker(
+                    [row["lat"], row["lng"]],
+                    popup=folium.Popup(
+                        f"<b>🏫 {row['nama']}</b><br>Kunjungan ke-{i}",
+                        max_width=200
+                    ),
+                    tooltip=f"Ke-{i}: {row['nama']}",
+                    icon=folium.Icon(color=c, icon="book")
+                ).add_to(group)
         group.add_to(m)
 
-    folium.LayerControl().add_to(m)
+    # Legend/Info box
+    info_html = f"""
+    <div style="position:fixed;bottom:30px;left:30px;z-index:1000;background:white;
+                padding:12px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.2);
+                font-family:Arial;font-size:12px">
+        <b>🧬 GA — Distribusi MBG Sukolilo</b><br>
+        <hr style="margin:5px 0">
+        Total jarak    : <b>{total_km:.2f} km</b><br>
+        Jumlah SPPG    : <b>{len(unique_sppgs)}</b><br>
+        Jumlah sekolah : <b>{total_sekolah}</b><br>
+        Best Scenario  : <b>{best_scen_name}</b>
+    </div>"""
+    
+    m.get_root().html.add_child(folium.Element(info_html))
+    folium.LayerControl(collapsed=False).add_to(m)
     m.save("Peta_Rute_GA_MBG_Sukolilo.html")
     print(f"\n[*] Map saved: Peta_Rute_GA_MBG_Sukolilo.html")

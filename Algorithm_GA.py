@@ -221,5 +221,5 @@ if __name__ == "__main__":
         group.add_to(m)
 
     folium.LayerControl().add_to(m)
-    m.save("ga_osrm_comparison_map.html")
-    print(f"\n[*] Map saved: ga_osrm_comparison_map.html")
+    m.save("Peta_Rute_GA_MBG_Sukolilo.html")
+    print(f"\n[*] Map saved: Peta_Rute_GA_MBG_Sukolilo.html")

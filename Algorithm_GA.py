@@ -245,6 +245,136 @@ new Chart(document.getElementById('chart').getContext('2d'), {{
         f.write(html)
     print("📊 Grafik konvergensi disimpan: Grafik_Konvergensi_GA.html")
 
+# DASHBOARD ANALISIS GA
+def simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_name):
+    total_km = sum(r["jarak_rute_km"] for r in rekap_hasil)
+    total_sekolah = sum(r["jumlah_sekolah"] for r in rekap_hasil)
+    
+    max_len = max(len(h) for h in semua_history) if semua_history else 100
+    labels_js = json.dumps(list(range(1, max_len + 1)))
+    
+    datasets = []
+    warna_list = ["#E74C3C","#3498DB","#2ECC71","#F39C12","#9B59B6","#1ABC9C","#E67E22"]
+    for i, (history, nama) in enumerate(zip(semua_history, nama_sppg_list)):
+        history_km = [round(d / 1000, 3) for d in history]
+        while len(history_km) < max_len:
+            history_km.append(history_km[-1])
+        datasets.append(f"""{{
+            label: "{nama}",
+            data: {json.dumps(history_km)},
+            borderColor: "{warna_list[i % len(warna_list)]}",
+            fill: false,
+            tension: 0.3,
+            pointRadius: 0
+        }}""")
+
+    table_rows = ""
+    for r in rekap_hasil:
+        table_rows += f"""
+        <tr>
+            <td>{r['sppg']}</td>
+            <td>{r['jumlah_sekolah']}</td>
+            <td>{r['jarak_rute_km']:.2f} km</td>
+            <td>{best_scen_name}</td>
+        </tr>"""
+
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Analisis GA MBG Sukolilo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f6fa; padding: 25px; color: #2f3640; }}
+        .card {{ background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }}
+        h2, h3 {{ margin-top: 0; color: #2f3542; }}
+        .grid {{ display: flex; gap: 20px; margin-bottom: 5px; }}
+        .box {{ flex: 1; background: #f1f2f6; padding: 20px; border-radius: 10px; text-align: center; border-left: 5px solid #3498db; }}
+        .box h3 {{ margin: 0; font-size: 24px; color: #2f3542; }}
+        .box p {{ margin: 5px 0 0; color: #747d8c; font-size: 14px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }}
+        th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #dcdde1; }}
+        th {{ background: #f8f9fa; color: #2f3542; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }}
+        tr:hover {{ background: #f1f2f6; }}
+        .total-row {{ font-weight: bold; background: #dfe4ea !important; }}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🧬 Analisis Genetic Algorithm — Distribusi MBG Sukolilo</h2>
+    <div class="grid">
+        <div class="box">
+            <h3>{total_km:.2f} km</h3>
+            <p>Total Jarak Rute</p>
+        </div>
+        <div class="box" style="border-left-color: #2ecc71;">
+            <h3>{len(nama_sppg_list)}</h3>
+            <p>Jumlah SPPG</p>
+        </div>
+        <div class="box" style="border-left-color: #e67e22;">
+            <h3>{total_sekolah}</h3>
+            <p>Total Sekolah Dilayani</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>📈 Grafik Konvergensi GA</h3>
+    <p style="font-size: 13px; color: #747d8c; margin-bottom: 20px;">Menampilkan penurunan total jarak (km) terhadap jumlah generasi.</p>
+    <canvas id="chart" height="100"></canvas>
+</div>
+
+<div class="card">
+    <h3>📋 Rekapitulasi Hasil per SPPG</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Pusat SPPG</th>
+                <th>Sekolah</th>
+                <th>Jarak Rute</th>
+                <th>Skenario Terbaik</th>
+            </tr>
+        </thead>
+        <tbody>
+            {table_rows}
+            <tr class="total-row">
+                <td>TOTAL</td>
+                <td>{total_sekolah}</td>
+                <td>{total_km:.2f} km</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+new Chart(document.getElementById('chart'), {{
+    type: 'line',
+    data: {{
+        labels: {labels_js},
+        datasets: [{",".join(datasets)}]
+    }},
+    options: {{
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {{
+            legend: {{ position: 'bottom', labels: {{ usePointStyle: true, boxWidth: 10, font: {{ size: 11 }} }} }}
+        }},
+        scales: {{
+            x: {{ title: {{ display: true, text: 'Generasi' }} }},
+            y: {{ title: {{ display: true, text: 'Jarak (km)' }} }}
+        }}
+    }}
+}});
+</script>
+
+</body>
+</html>"""
+
+    with open("Analisis_GA_MBG_Sukolilo.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print("📊 Dashboard analisis disimpan: Analisis_GA_MBG_Sukolilo.html")
+
 # MAIN
 if __name__ == "__main__":
     pd.set_option('display.max_columns', None)
@@ -315,7 +445,7 @@ if __name__ == "__main__":
         data = cluster_data[sppg_name]
         # Higher budget for final visualization
         route, d, history = run_ga(data["num_nodes"], data["dist_matrix"], best_scen['sel'], best_scen['cross'], best_scen['mut'], 
-                          pop_size=50, generations=200)
+                          pop_size=50, generations=100)
         
         dist_km = round(d/1000, 2)
         total_km += dist_km
@@ -384,4 +514,7 @@ if __name__ == "__main__":
 
     # SIMPAN GRAFIK KONVERGENSI
     simpan_grafik_konvergensi_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_name)
+
+    # SIMPAN DASHBOARD ANALISIS
+    simpan_analisis_ga(semua_history, nama_sppg_list, rekap_hasil, best_scen_name)
 

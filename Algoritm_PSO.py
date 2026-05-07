@@ -5,14 +5,19 @@ import folium
 import os
 import random
 import requests
+import optuna
 
-# --- Parameter PSO ---
+# --- Mode & Parameter PSO ---
+MODE_TUNING  = True  # True: Optuna, False: pakai DEFAULT
+
 N_PARTICLES  = 50    # jumlah partikel — lebih banyak agar eksplorasi ruang solusi lebih luas
 N_ITERATIONS = 100   # jumlah iterasi
-W            = 0.8   # bobot inersia lebih tinggi — partikel lebih berani menjelajah di awal
-C1           = 0.7   # koefisien kognitif — tarikan ke posisi terbaik partikel sendiri (pBest)
-C2           = 0.7   # koefisien sosial — tarikan ke posisi terbaik seluruh swarm (gBest)
 W_DAMP       = 0.995 # redaman inersia lebih lambat — eksplorasi berlangsung lebih lama
+
+# Parameter default (dipakai jika MODE_TUNING = False)
+DEFAULT_W  = 0.8   # bobot inersia
+DEFAULT_C1 = 0.7   # koefisien kognitif
+DEFAULT_C2 = 0.7   # koefisien sosial
 
 
 class ParticleSwarmTSP:
@@ -138,6 +143,30 @@ def dapatkan_jalur_aspal_osrm(koordinat_rute_urut):
     return koordinat_rute_urut
 
 
+# ==========================================
+# HYPERPARAMETER TUNING (OPTUNA)
+# ==========================================
+def optuna_tuning_pso(matriks_jarak):
+    """Cari W, C1, C2 optimal pakai Bayesian Optimization (Optuna)."""
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+    def objective(trial):
+        w  = trial.suggest_float("w",  0.3, 0.9)
+        c1 = trial.suggest_float("c1", 0.5, 2.0)
+        c2 = trial.suggest_float("c2", 0.5, 2.0)
+
+        pso = ParticleSwarmTSP(matriks_jarak, N_PARTICLES, 30, w, c1, c2, W_DAMP)
+        (_, best_dist), _ = pso.run()
+        return best_dist
+
+    study = optuna.create_study(direction="minimize")
+    study.optimize(objective, n_trials=15)
+
+    p = study.best_params
+    print(f"   🎯 Best params → W: {p['w']:.2f} | C1: {p['c1']:.2f} | C2: {p['c2']:.2f}")
+    return p["w"], p["c1"], p["c2"]
+
+
 def simpan_grafik_konvergensi(semua_history, nama_sppg_list):
     """Simpan grafik konvergensi PSO per klaster SPPG sebagai HTML interaktif (Chart.js)."""
     labels_js  = json.dumps(list(range(1, N_ITERATIONS + 1)))
@@ -173,6 +202,144 @@ new Chart(document.getElementById('chart').getContext('2d'),{{
     print("Grafik konvergensi disimpan: Grafik_Konvergensi_PSO.html")
 
 
+# ==========================================
+# DASHBOARD ANALISIS PSO
+# ==========================================
+def simpan_analisis_pso(semua_history, nama_sppg_list, rekap_hasil):
+    """Simpan dashboard analisis PSO sebagai HTML interaktif (Chart.js)."""
+    total_km      = sum(r["jarak_rute_km"] for r in rekap_hasil)
+    total_sekolah = sum(r["jumlah_sekolah"] for r in rekap_hasil)
+
+    max_len   = max(len(h) for h in semua_history) if semua_history else N_ITERATIONS
+    labels_js = json.dumps(list(range(1, max_len + 1)))
+    warna_list = ["#E74C3C", "#3498DB", "#2ECC71", "#F39C12", "#9B59B6", "#1ABC9C", "#E67E22"]
+
+    datasets = []
+    for i, (history, nama) in enumerate(zip(semua_history, nama_sppg_list)):
+        history_km = [round(d / 1000, 3) for d in history]
+        while len(history_km) < max_len:
+            history_km.append(history_km[-1])
+        datasets.append(f"""{{
+            label: "{nama}",
+            data: {json.dumps(history_km)},
+            borderColor: "{warna_list[i % len(warna_list)]}",
+            fill: false,
+            tension: 0.3,
+            pointRadius: 0
+        }}""")
+
+    table_rows = ""
+    for r in rekap_hasil:
+        table_rows += f"""
+        <tr>
+            <td>{r['sppg']}</td>
+            <td>{r['jumlah_sekolah']}</td>
+            <td>{r['jarak_rute_km']:.2f} km</td>
+            <td>W={r['w']:.2f}, C1={r['c1']:.2f}, C2={r['c2']:.2f}</td>
+        </tr>"""
+
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Analisis PSO MBG Sukolilo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f6fa; padding: 25px; color: #2f3640; }}
+        .card {{ background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }}
+        h2, h3 {{ margin-top: 0; color: #2f3542; }}
+        .grid {{ display: flex; gap: 20px; margin-bottom: 5px; }}
+        .box {{ flex: 1; background: #f1f2f6; padding: 20px; border-radius: 10px; text-align: center; border-left: 5px solid #3498db; }}
+        .box h3 {{ margin: 0; font-size: 24px; color: #2f3542; }}
+        .box p {{ margin: 5px 0 0; color: #747d8c; font-size: 14px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
+        th, td {{ padding: 12px 15px; text-align: left; border-bottom: 1px solid #dcdde1; }}
+        th {{ background: #f8f9fa; color: #2f3542; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }}
+        tr:hover {{ background: #f1f2f6; }}
+        .total-row {{ font-weight: bold; background: #dfe4ea !important; }}
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🐦 Analisis Particle Swarm Optimization — Distribusi MBG Sukolilo</h2>
+    <div class="grid">
+        <div class="box">
+            <h3>{total_km:.2f} km</h3>
+            <p>Total Jarak Rute</p>
+        </div>
+        <div class="box" style="border-left-color: #2ecc71;">
+            <h3>{len(nama_sppg_list)}</h3>
+            <p>Jumlah SPPG</p>
+        </div>
+        <div class="box" style="border-left-color: #e67e22;">
+            <h3>{total_sekolah}</h3>
+            <p>Total Sekolah Dilayani</p>
+        </div>
+        <div class="box" style="border-left-color: #9b59b6;">
+            <h3>{'Optuna' if MODE_TUNING else 'Default'}</h3>
+            <p>Mode Tuning</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>📈 Grafik Konvergensi PSO</h3>
+    <p style="font-size: 13px; color: #747d8c; margin-bottom: 20px;">Menampilkan penurunan total jarak (km) terhadap jumlah iterasi.</p>
+    <canvas id="chart" height="100"></canvas>
+</div>
+
+<div class="card">
+    <h3>📋 Rekapitulasi Hasil per SPPG</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Pusat SPPG</th>
+                <th>Sekolah</th>
+                <th>Jarak Rute</th>
+                <th>Parameter PSO</th>
+            </tr>
+        </thead>
+        <tbody>
+            {table_rows}
+            <tr class="total-row">
+                <td>TOTAL</td>
+                <td>{total_sekolah}</td>
+                <td>{total_km:.2f} km</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+new Chart(document.getElementById('chart'), {{
+    type: 'line',
+    data: {{
+        labels: {labels_js},
+        datasets: [{",".join(datasets)}]
+    }},
+    options: {{
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {{
+            legend: {{ position: 'bottom', labels: {{ usePointStyle: true, boxWidth: 10, font: {{ size: 11 }} }} }}
+        }},
+        scales: {{
+            x: {{ title: {{ display: true, text: 'Iterasi' }} }},
+            y: {{ title: {{ display: true, text: 'Jarak (km)' }} }}
+        }}
+    }}
+}});
+</script>
+
+</body>
+</html>"""
+
+    with open("Analisis_PSO_MBG_Sukolilo.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print("Dashboard analisis disimpan: Analisis_PSO_MBG_Sukolilo.html")
+
+
 def main():
     folder_matrix = "matriks_jarak"
     try:
@@ -196,7 +363,13 @@ def main():
         warna_rute    = daftar_warna[idx % len(daftar_warna)]
         print(f"Memproses: {nama_sppg[-35:]}")
         print(f"   Node: {len(node_names)} titik (1 SPPG + {len(node_names) - 1} sekolah)")
-        pso = ParticleSwarmTSP(matriks_jarak, N_PARTICLES, N_ITERATIONS, W, C1, C2, W_DAMP)
+        # Tuning parameter
+        if MODE_TUNING:
+            opt_w, opt_c1, opt_c2 = optuna_tuning_pso(matriks_jarak)
+        else:
+            opt_w, opt_c1, opt_c2 = DEFAULT_W, DEFAULT_C1, DEFAULT_C2
+
+        pso = ParticleSwarmTSP(matriks_jarak, N_PARTICLES, N_ITERATIONS, opt_w, opt_c1, opt_c2, W_DAMP)
         (g_best, best_distance), history = pso.run()
         urutan_kunjungan = g_best + [0]
         jarak_km         = round(best_distance / 1000, 2)
@@ -213,6 +386,9 @@ def main():
             "sppg":             nama_sppg,
             "jumlah_sekolah":   len(df_klaster),
             "jarak_rute_km":    jarak_km,
+            "w":                round(opt_w, 3),
+            "c1":               round(opt_c1, 3),
+            "c2":               round(opt_c2, 3),
             "urutan_kunjungan": " -> ".join([n[:30] for n in rute_nama]),
         })
         grup_rute  = folium.FeatureGroup(name=f"Rute {nama_sppg[-25:]} ({jarak_km} km)")
@@ -256,10 +432,13 @@ def main():
     m.save(nama_peta)
     pd.DataFrame(rekap_hasil).to_csv("Rekap_PSO_MBG_Sukolilo.csv", index=False, encoding="utf-8-sig")
     simpan_grafik_konvergensi(semua_history, nama_sppg_list)
+    simpan_analisis_pso(semua_history, nama_sppg_list, rekap_hasil)
     print("SEMUA KLASTER BERHASIL DIPROSES!")
     print(f"Peta        : {nama_peta}")
     print(f"Konvergensi : Grafik_Konvergensi_PSO.html")
+    print(f"Analisis    : Analisis_PSO_MBG_Sukolilo.html")
     print(f"Rekap CSV   : Rekap_PSO_MBG_Sukolilo.csv")
+    print(f"Mode        : {'Optuna' if MODE_TUNING else 'Default'}")
     print(f"Total jarak : {total_km:.2f} km")
 
 
